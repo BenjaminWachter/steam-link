@@ -18,6 +18,22 @@
 					"TitleAlignment": "middle"
 				}
 			]
+		},
+		{
+			"Name": "Steam List",
+			"UUID": "com.benwach.steam-link.steam-list",
+			"Icon": "imgs/actions/counter/icon",
+			"Tooltip": "Displays a count, which increments by one on press.",
+			"PropertyInspectorPath": "ui/steam-list.html",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/counter/key",
+					"TitleAlignment": "middle"
+				}
+			]
 		}
 	],
 	"Category": "steam-link",
