@@ -1,4 +1,7 @@
-import { action, KeyDownEvent, SingletonAction, WillAppearEvent } from "@elgato/streamdeck";
+import streamDeck, { action, KeyDownEvent, SingletonAction, WillAppearEvent } from "@elgato/streamdeck";
+
+
+const incrementCounterLogger = streamDeck.logger.createScope("IncrementCounter");
 
 /**
  * An example action class that displays a count that increments by one each time the button is pressed.
@@ -29,6 +32,7 @@ export class IncrementCounter extends SingletonAction<CounterSettings> {
 		// Update the current count in the action's settings, and change the title.
 		await ev.action.setSettings(settings);
 		await ev.action.setTitle(`${settings.count}`);
+		incrementCounterLogger.info(`Button pressed. Count is now ${settings.count}`);
 	}
 }
 
