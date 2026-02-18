@@ -6,7 +6,10 @@
 		],
 		"module": "ES2022",
 		"moduleResolution": "Bundler",
-		"noImplicitOverride": true
+		"noImplicitOverride": true,
+		"allowJs": true,
+		"esModuleInterop": true,
+		"outDir": "./com.benwach.steam-link.sdPlugin/bin"
 	},
 	"include": [
 		"src/**/*.ts"
