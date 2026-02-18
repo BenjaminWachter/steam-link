@@ -9,6 +9,6 @@ declare module 'steamapi-node' {
     }
     
     export class Games {}
-    export class Users {}
-    export class Others {}
+    export class Users { getUserRecentGames(id: string): Promise<Array<Object>> }
+    export class Others { resolve(input: string): Promise<any> }
 }
