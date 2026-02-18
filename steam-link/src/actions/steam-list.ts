@@ -1,5 +1,4 @@
 import streamDeck, { action, KeyDownEvent, SingletonAction, WillAppearEvent } from "@elgato/streamdeck";
-import { Games, SteamUser } from "steamapi-node";
 
 const steamAPILogger = streamDeck.logger.createScope("SteamAPI");
 
@@ -24,7 +23,7 @@ export class SteamList extends SingletonAction<SteamListSettings> {
 
         steamAPILogger.info(`App List has ${AppList.length} entries.`);
                     fetchSteamApps(ev.payload.settings.userID!, ev.payload.settings.apiKey!).then(apps => {
-                AppList = apps;
+                // AppList = apps;
             });
         steamAPILogger.info(`After fetching, App List has ${AppList.length} entries.`);
         return ev.action.setTitle(`Apps: ${AppList.length}`);
@@ -32,19 +31,54 @@ export class SteamList extends SingletonAction<SteamListSettings> {
 }
 
 type SteamListSettings = {
-    userID?: number;
+    userID?: string;
     apiKey?: string;
 };
 
-let AppList: Array<Games> = [];
+let AppList: Array<{
+    name: string;
+    appID: number;
+    playtimeForever: number;
+    playtime2Weeks: number;
+    imgIconUrl: string;
+    imgLogoUrl: string;
+}> = [];
 
-async function fetchSteamApps(userID: number, apiKey: string): Promise<Array<Games>> {
+async function fetchSteamApps(userID: string, apiKey: string): Promise<Array<{
+    name: string;
+    appID: number;
+    playtimeForever: number;
+    playtime2Weeks: number;
+    imgIconUrl: string;
+    imgLogoUrl: string;
+}>> {
     steamAPILogger.info(`Fetching Steam Apps for user ${userID} with API key ${apiKey.substring(0, 7)}...`);
     try {
-        const steam = new SteamUser(apiKey);
-        return steam.others.resolve(`/profiles/${userID}`).then(id => {
-            return steam.users.getUserRecentGames(id);
-        });
+        const url = `https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key=${apiKey}&steamid=${userID}&count=10&format=json`;
+        
+        const response = await fetch(url);
+        const data = await response.body as any;
+        const parsedData = JSON.parse(data);
+
+        steamAPILogger.info(`Response: ${parsedData ? "Received data" : "No data received"}`);
+
+        const gamesList = parsedData.response?.games || [];
+        
+        if (!Array.isArray(gamesList)) {
+            steamAPILogger.warn(`Unexpected response format: ${typeof gamesList}`);
+            return [];
+        }
+        
+        steamAPILogger.info(`Fetched ${gamesList.length} games for user ${userID}.`);
+        
+        return gamesList.map(game => ({
+            name: game.name,
+            appID: game.appid,
+            playtimeForever: game.playtime_forever,
+            playtime2Weeks: game.playtime_2weeks,
+            imgIconUrl: `https://media.steampowered.com/steamcommunity/public/images/apps/${game.appid}/${game.img_icon_url}.jpg`,
+            imgLogoUrl: `https://media.steampowered.com/steamcommunity/public/images/apps/${game.appid}/${game.img_logo_url}.jpg`,
+        }));
     } catch (err) {
         steamAPILogger.error(`Error fetching recent games for user ${userID}: ${err}`);
         return [];
