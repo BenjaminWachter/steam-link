@@ -1,4 +1,5 @@
 import streamDeck, { action, KeyDownEvent, SingletonAction, WillAppearEvent } from "@elgato/streamdeck";
+import "steamapi-node"
 
 const steamAPILogger = streamDeck.logger.createScope("SteamAPI");
 

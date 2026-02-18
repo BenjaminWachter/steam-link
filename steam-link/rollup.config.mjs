@@ -4,6 +4,7 @@ import terser from "@rollup/plugin-terser";
 import typescript from "@rollup/plugin-typescript";
 import path from "node:path";
 import url from "node:url";
+import json from "@rollup/plugin-json";
 
 const isWatching = !!process.env.ROLLUP_WATCH;
 const sdPlugin = "com.benwach.steam-link.sdPlugin";
@@ -36,6 +37,7 @@ const config = {
 			preferBuiltins: true
 		}),
 		commonjs(),
+		json(),
 		!isWatching && terser(),
 		{
 			name: "emit-module-package-file",
