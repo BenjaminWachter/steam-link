@@ -22,9 +22,10 @@ export class SteamList extends SingletonAction<SteamListSettings> {
         steamAPILogger.info(`Key down event received for action ${ev.action}. Current AppList: ${AppList ? AppList.length : "not loaded"}`);
 
         steamAPILogger.info(`App List has ${AppList.length} entries.`);
-                    fetchSteamApps(ev.payload.settings.userID!, ev.payload.settings.apiKey!).then(apps => {
-                // AppList = apps;
-            });
+        fetchSteamApps(ev.payload.settings.userID!, ev.payload.settings.apiKey!).then(apps => {
+            steamAPILogger.info(`Fetched ${apps.length} apps from Steam API.`);
+            AppList = apps.slice(0, 10); // Limit to 10 apps for display
+        });
         steamAPILogger.info(`After fetching, App List has ${AppList.length} entries.`);
         return ev.action.setTitle(`Apps: ${AppList.length}`);
     }
@@ -57,20 +58,16 @@ async function fetchSteamApps(userID: string, apiKey: string): Promise<Array<{
         const url = `https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key=${apiKey}&steamid=${userID}&count=10&format=json`;
         
         const response = await fetch(url);
-        const data = await response.body as any;
-        const parsedData = JSON.parse(data);
+        const data = await response.text();
+        const gamesList = JSON.parse(data).response?.games;
 
-        steamAPILogger.info(`Response: ${parsedData ? "Received data" : "No data received"}`);
+        steamAPILogger.info(`Response: ${gamesList ? "Received data" : "No data received"}`);
 
-        const gamesList = parsedData.response?.games || [];
-        
         if (!Array.isArray(gamesList)) {
             steamAPILogger.warn(`Unexpected response format: ${typeof gamesList}`);
             return [];
         }
-        
-        steamAPILogger.info(`Fetched ${gamesList.length} games for user ${userID}.`);
-        
+                
         return gamesList.map(game => ({
             name: game.name,
             appID: game.appid,
