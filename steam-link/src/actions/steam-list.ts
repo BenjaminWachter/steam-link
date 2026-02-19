@@ -12,22 +12,18 @@ export class SteamList extends SingletonAction<SteamListSettings> {
         }
 
         if (AppList.length === 0) {
-            // fetchSteamApps(ev.payload.settings.userID!, ev.payload.settings.apiKey!).then(apps => {
-            //     AppList = apps;
-            // });
+            steamAPILogger.info(`App List has ${AppList.length} entries.`);
+            fetchSteamApps(ev.payload.settings.userID!, ev.payload.settings.apiKey!).then(apps => {
+                steamAPILogger.info(`Fetched ${apps.length} apps from Steam API.`);
+                AppList = apps.slice(0, 10); // Limit to 10 apps for display
+            });
+            steamAPILogger.info(`After fetching, App List has ${AppList.length} entries.`);
             return ev.action.setTitle(`Steam List`);
         }
     }
     override onKeyDown(ev: KeyDownEvent<SteamListSettings>): void | Promise<void> {
         steamAPILogger.info(`Key down event received for action ${ev.action}. Current AppList: ${AppList ? AppList.length : "not loaded"}`);
-
-        steamAPILogger.info(`App List has ${AppList.length} entries.`);
-        fetchSteamApps(ev.payload.settings.userID!, ev.payload.settings.apiKey!).then(apps => {
-            steamAPILogger.info(`Fetched ${apps.length} apps from Steam API.`);
-            AppList = apps.slice(0, 10); // Limit to 10 apps for display
-        });
-        steamAPILogger.info(`After fetching, App List has ${AppList.length} entries.`);
-        return ev.action.setTitle(`Apps: ${AppList.length}`);
+        return streamDeck.profiles.switchToProfile("Steam Apps (auto)");
     }
 }
 

@@ -34,6 +34,22 @@
 					"TitleAlignment": "middle"
 				}
 			]
+		},
+		{
+			"Name": "Steam Game",
+			"UUID": "com.benwach.steam-link.steam-game",
+			"Icon": "imgs/actions/counter/icon",
+			"Tooltip": "",
+			"PropertyInspectorPath": "ui/steam-game.html",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/counter/key",
+					"TitleAlignment": "middle"
+				}
+			]
 		}
 	],
 	"Category": "steam-link",
@@ -59,5 +75,14 @@
 		"Version": "20",
 		"Debug": "enabled"
 	},
-	"UUID": "com.benwach.steam-link"
+	"UUID": "com.benwach.steam-link",
+	"Profiles": [
+		{
+			"Name": "Steam Apps (auto)",
+			"DeviceType": 0,
+			"Readonly": false,
+			"AutoInstall": true,
+			"DontAutoSwitchWhenInstalled": false
+		}
+	]
 }
