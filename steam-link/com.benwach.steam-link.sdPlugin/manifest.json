@@ -36,11 +36,11 @@
 			]
 		},
 		{
-			"Name": "Steam Game",
-			"UUID": "com.benwach.steam-link.steam-game",
+			"Name": "Launch Steam Game",
+			"UUID": "com.benwach.steam-link.launch-steam-game",
 			"Icon": "imgs/actions/counter/icon",
-			"Tooltip": "",
-			"PropertyInspectorPath": "ui/steam-game.html",
+			"Tooltip": "Launcher for a steam game.",
+			"PropertyInspectorPath": "ui/launch-steam-game.html",
 			"Controllers": [
 				"Keypad"
 			],
@@ -78,7 +78,7 @@
 	"UUID": "com.benwach.steam-link",
 	"Profiles": [
 		{
-			"Name": "Steam Apps (auto)",
+			"Name": "profiles/Steam Apps (auto)",
 			"DeviceType": 0,
 			"Readonly": false,
 			"AutoInstall": true,

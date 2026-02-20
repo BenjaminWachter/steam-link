@@ -20,10 +20,13 @@ export class SteamList extends SingletonAction<SteamListSettings> {
             steamAPILogger.info(`After fetching, App List has ${AppList.length} entries.`);
             return ev.action.setTitle(`Steam List`);
         }
+        return;
     }
+
     override onKeyDown(ev: KeyDownEvent<SteamListSettings>): void | Promise<void> {
         steamAPILogger.info(`Key down event received for action ${ev.action}. Current AppList: ${AppList ? AppList.length : "not loaded"}`);
-        return streamDeck.profiles.switchToProfile("Steam Apps (auto)");
+        streamDeck.profiles.switchToProfile(ev.action.device.id, "Steam Apps (auto)");
+        return;
     }
 }
 
