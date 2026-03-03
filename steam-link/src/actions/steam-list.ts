@@ -33,34 +33,17 @@ export class SteamList extends SingletonAction<SteamListSettings> {
     }
 }
 
-type SteamListSettings = {
-    userID?: string;
-    apiKey?: string;
-};
-
-
-export type AppListItem = {
-    name: string;
-    appID: number;
-    playtimeForever: number;
-    playtime2Weeks: number;
-    imgIconUrl: string;
-    imgLogoUrl: string;
-};
-
-export let AppList: AppListItem[] = [];
-
 async function enteryPoint(ev: WillAppearEvent<SteamListSettings> | KeyDownEvent<SteamListSettings>): Promise<void> {
     if (!ev.payload.settings.userID || !ev.payload.settings.apiKey) {
-            steamAPILogger.warn(`User ID or API key not set for action ${ev.action}`);
-            return ev.action.setTitle(`Set User ID and API Key`);
+        steamAPILogger.warn(`User ID or API key not set for action ${ev.action}`);
+        return ev.action.setTitle(`Set User ID and API Key`);
         }
-
+        
         if (AppList.length === 0) {
             steamAPILogger.info(`App List has ${AppList.length} entries.`);
             fetchSteamApps(ev.payload.settings.userID!, ev.payload.settings.apiKey!).then(apps => {
                 steamAPILogger.info(`Fetched ${apps.length} apps from Steam API.`);
-                AppList.push(...apps.slice(0, 10)); // Limit to 10 apps for display
+                AppList.push(...apps.slice(0, 24)); // Limit to 24 apps for display
             });
             steamAPILogger.info(`After fetching, App List has ${AppList.length} entries.`);
             return ev.action.setTitle(`Steam List`);
@@ -78,14 +61,14 @@ async function fetchSteamApps(userID: string, apiKey: string): Promise<AppListIt
         const response = await fetch(url);
         const data = await response.text();
         const gamesList = JSON.parse(data).response?.games;
-
+        
         steamAPILogger.info(`Response: ${gamesList ? "Received data" : "No data received"}`);
-
+        
         if (!Array.isArray(gamesList)) {
             steamAPILogger.warn(`Unexpected response format: ${typeof gamesList}`);
             return [];
         }
-                
+        
         return gamesList.map(game => ({
             name: game.name,
             appID: game.appid,
@@ -99,3 +82,20 @@ async function fetchSteamApps(userID: string, apiKey: string): Promise<AppListIt
         return [];
     }
 }
+
+type SteamListSettings = {
+    userID?: string;
+    apiKey?: string;
+};
+
+
+export type AppListItem = {
+    name: string;
+    appID: number;
+    playtimeForever: number;
+    playtime2Weeks: number;
+    imgIconUrl: string;
+    imgLogoUrl: string;
+};
+
+export let AppList: AppListItem[] = [];
