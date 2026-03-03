@@ -5,28 +5,31 @@ const steamAPILogger = streamDeck.logger.createScope("SteamAPI");
 @action({ UUID: "com.benwach.steam-link.steam-list" })
 export class SteamList extends SingletonAction<SteamListSettings> {
     override onWillAppear(ev: WillAppearEvent<SteamListSettings>): void | Promise<void> {
-        // Check if the user ID and API key are set in the settings.
-        if (!ev.payload.settings.userID || !ev.payload.settings.apiKey) {
-            steamAPILogger.warn(`User ID or API key not set for action ${ev.action}`);
-            return ev.action.setTitle(`Set User ID and API Key`);
-        }
-
-        if (AppList.length === 0) {
-            steamAPILogger.info(`App List has ${AppList.length} entries.`);
-            fetchSteamApps(ev.payload.settings.userID!, ev.payload.settings.apiKey!).then(apps => {
-                steamAPILogger.info(`Fetched ${apps.length} apps from Steam API.`);
-                AppList = apps.slice(0, 10); // Limit to 10 apps for display
-            });
-            steamAPILogger.info(`After fetching, App List has ${AppList.length} entries.`);
-            return ev.action.setTitle(`Steam List`);
-        }
-        return;
+        enteryPoint(ev);
     }
 
-    override onKeyDown(ev: KeyDownEvent<SteamListSettings>): void | Promise<void> {
-        steamAPILogger.info(`Key down event received for action ${ev.action}. Current AppList: ${AppList ? AppList.length : "not loaded"}`);
-        streamDeck.profiles.switchToProfile(ev.action.device.id, "Steam Apps (auto)");
-        return;
+    override async onKeyDown(ev: KeyDownEvent<SteamListSettings>): Promise<void> {
+        
+        if (AppList.length === 0) {
+            steamAPILogger.warn(`App List is empty. Cannot display games.`);
+            enteryPoint(ev);
+            return;
+        }
+        
+        steamAPILogger.debug(` Key down event received. Device ID: ${ev.action.device.id}`);
+        steamAPILogger.info(`Key down event received for action ${ev.action.manifestId}. Current device id: ${ev.action.device.id}`);
+        try {
+            steamAPILogger.debug(` Attempting to switch to profile: Steam Apps (auto)`);
+            const result = await streamDeck.profiles.switchToProfile(ev.action.device.id, "Steam Apps (auto)");
+            steamAPILogger.debug(` Profile switch result:`, result);
+            if (result !== undefined) {
+            steamAPILogger.info(`Successfully switched to profile: Steam Apps (auto)`);
+            await ev.action.setTitle(`Switched!`);
+            }
+        } catch (error) {
+            steamAPILogger.debug(`Profile switch error:`, error);
+            steamAPILogger.error(`Failed to switch profile: ${error}`);
+        }
     }
 }
 
@@ -43,6 +46,26 @@ let AppList: Array<{
     imgIconUrl: string;
     imgLogoUrl: string;
 }> = [];
+
+async function enteryPoint(ev: WillAppearEvent<SteamListSettings> | KeyDownEvent<SteamListSettings>): Promise<void> {
+    if (!ev.payload.settings.userID || !ev.payload.settings.apiKey) {
+            steamAPILogger.warn(`User ID or API key not set for action ${ev.action}`);
+            return ev.action.setTitle(`Set User ID and API Key`);
+        }
+
+        if (AppList.length === 0) {
+            steamAPILogger.info(`App List has ${AppList.length} entries.`);
+            fetchSteamApps(ev.payload.settings.userID!, ev.payload.settings.apiKey!).then(apps => {
+                steamAPILogger.info(`Fetched ${apps.length} apps from Steam API.`);
+                AppList = apps.slice(0, 10); // Limit to 10 apps for display
+            });
+            steamAPILogger.info(`After fetching, App List has ${AppList.length} entries.`);
+            return ev.action.setTitle(`Steam List`);
+        }
+        
+    steamAPILogger.info(`Steam List action appeared`);
+    ev.action.setTitle(`Steam List`);
+}
 
 async function fetchSteamApps(userID: string, apiKey: string): Promise<Array<{
     name: string;
@@ -80,3 +103,5 @@ async function fetchSteamApps(userID: string, apiKey: string): Promise<Array<{
         return [];
     }
 }
+
+export { AppList as AppList};

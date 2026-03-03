@@ -15,7 +15,8 @@
 			"States": [
 				{
 					"Image": "imgs/actions/counter/key",
-					"TitleAlignment": "middle"
+					"TitleAlignment": "middle",
+					"ShowTitle": true
 				}
 			]
 		},
@@ -31,7 +32,8 @@
 			"States": [
 				{
 					"Image": "imgs/actions/counter/key",
-					"TitleAlignment": "middle"
+					"TitleAlignment": "middle",
+					"ShowTitle": true
 				}
 			]
 		},
@@ -47,7 +49,8 @@
 			"States": [
 				{
 					"Image": "imgs/actions/counter/key",
-					"TitleAlignment": "middle"
+					"TitleAlignment": "middle",
+					"ShowTitle": true
 				}
 			]
 		}
@@ -78,7 +81,7 @@
 	"UUID": "com.benwach.steam-link",
 	"Profiles": [
 		{
-			"Name": "profiles/Steam Apps (auto)",
+			"Name": "Steam Apps (auto)",
 			"DeviceType": 0,
 			"Readonly": false,
 			"AutoInstall": true,

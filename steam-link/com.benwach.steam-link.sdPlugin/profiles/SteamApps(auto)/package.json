@@ -1,0 +1,11 @@
+{
+    "AppVersion": "7.2.0.22454",
+    "DeviceModel": "20GBA9901",
+    "DeviceSettings": null,
+    "FormatVersion": 1,
+    "OSType": "Windows",
+    "OSVersion": "10.0.26200",
+    "RequiredPlugins": [
+        "com.benwach.steam-link"
+    ]
+}

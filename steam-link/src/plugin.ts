@@ -10,9 +10,7 @@ streamDeck.logger.setLevel("info");
 // Register the increment action.
 streamDeck.actions.registerAction(new IncrementCounter());
 streamDeck.actions.registerAction(new SteamList());
-// streamDeck.actions.registerAction(new LaunchSteamGame());
-
-
+streamDeck.actions.registerAction(new LaunchSteamGame());
 
 // Finally, connect to the Stream Deck.
 streamDeck.connect();
