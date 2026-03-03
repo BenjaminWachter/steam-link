@@ -1,10 +1,29 @@
 import streamDeck, { action, KeyDownEvent, SingletonAction, WillAppearEvent } from "@elgato/streamdeck";
-import { AppList, AppListItem } from "./steam-list";
-import { waitForDebugger } from "inspector";
+import { AppList } from "./steam-list";
+import { exec } from "node:child_process";
+import type { ExecException } from "node:child_process";
 
 const LaunchLogger = streamDeck.logger.createScope("LaunchSteamGame");
 
 const actionIndexMap = new Map<string, number>();
+
+function launchSteamGame(appId?: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+        if (!appId || appId < 0) {
+            reject(new Error("Invalid app ID"));
+            return;
+        }
+
+        exec(`start "" "steam://run/${appId}"`, { shell: "cmd.exe" }, (error: ExecException | null) => {
+            if (error) {
+                reject(error);
+                return;
+            }
+
+            resolve();
+        });
+    });
+}
 
 @action({ UUID: "com.benwach.steam-link.launch-steam-game" })
 export class LaunchSteamGame extends SingletonAction<LaunchSteamGameSettings> {
@@ -31,10 +50,19 @@ export class LaunchSteamGame extends SingletonAction<LaunchSteamGameSettings> {
     
     override async onKeyDown(ev: KeyDownEvent<LaunchSteamGameSettings>): Promise<void> {
         const index = actionIndexMap.get(ev.action.id) ?? 0;
-        LaunchLogger.info(`Key down event received for action ${ev.action.id}. Launching game at index ${index} with appID ${AppList?.[index]?.appID ?? -1}`);
-        return streamDeck.system.openUrl(`steam://run/${AppList?.[index]?.appID ?? -1}`);
+        const appId = AppList?.[index]?.appID;
+
+        LaunchLogger.info(`Key down event received for action ${ev.action.id}. Launching game at index ${index} with appID ${appId ?? -1}`);
+
+        try {
+            await launchSteamGame(appId);
+        } catch (error) {
+            LaunchLogger.error(`Failed to launch Steam game: ${error}`);
+            await ev.action.setTitle("Launch\nFailed");
+        }
     }
 }
+
 
 type LaunchSteamGameSettings = {
     index?: number;
