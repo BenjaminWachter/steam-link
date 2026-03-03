@@ -38,14 +38,17 @@ type SteamListSettings = {
     apiKey?: string;
 };
 
-let AppList: Array<{
+
+export type AppListItem = {
     name: string;
     appID: number;
     playtimeForever: number;
     playtime2Weeks: number;
     imgIconUrl: string;
     imgLogoUrl: string;
-}> = [];
+};
+
+export let AppList: AppListItem[] = [];
 
 async function enteryPoint(ev: WillAppearEvent<SteamListSettings> | KeyDownEvent<SteamListSettings>): Promise<void> {
     if (!ev.payload.settings.userID || !ev.payload.settings.apiKey) {
@@ -57,7 +60,7 @@ async function enteryPoint(ev: WillAppearEvent<SteamListSettings> | KeyDownEvent
             steamAPILogger.info(`App List has ${AppList.length} entries.`);
             fetchSteamApps(ev.payload.settings.userID!, ev.payload.settings.apiKey!).then(apps => {
                 steamAPILogger.info(`Fetched ${apps.length} apps from Steam API.`);
-                AppList = apps.slice(0, 10); // Limit to 10 apps for display
+                AppList.push(...apps.slice(0, 10)); // Limit to 10 apps for display
             });
             steamAPILogger.info(`After fetching, App List has ${AppList.length} entries.`);
             return ev.action.setTitle(`Steam List`);
@@ -67,14 +70,7 @@ async function enteryPoint(ev: WillAppearEvent<SteamListSettings> | KeyDownEvent
     ev.action.setTitle(`Steam List`);
 }
 
-async function fetchSteamApps(userID: string, apiKey: string): Promise<Array<{
-    name: string;
-    appID: number;
-    playtimeForever: number;
-    playtime2Weeks: number;
-    imgIconUrl: string;
-    imgLogoUrl: string;
-}>> {
+async function fetchSteamApps(userID: string, apiKey: string): Promise<AppListItem[]> {
     steamAPILogger.info(`Fetching Steam Apps for user ${userID} with API key ${apiKey.substring(0, 7)}...`);
     try {
         const url = `https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key=${apiKey}&steamid=${userID}&count=10&format=json`;
@@ -103,5 +99,3 @@ async function fetchSteamApps(userID: string, apiKey: string): Promise<Array<{
         return [];
     }
 }
-
-export { AppList as AppList};
