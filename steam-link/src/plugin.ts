@@ -1,6 +1,5 @@
 import streamDeck from "@elgato/streamdeck";
 
-import { IncrementCounter } from "./actions/increment-counter";
 import { SteamList} from "./actions/steam-list";
 import { LaunchSteamGame } from "./actions/launch-steam-game";
 
@@ -8,7 +7,6 @@ import { LaunchSteamGame } from "./actions/launch-steam-game";
 streamDeck.logger.setLevel("info");
 
 // Register the increment action.
-streamDeck.actions.registerAction(new IncrementCounter());
 streamDeck.actions.registerAction(new SteamList());
 streamDeck.actions.registerAction(new LaunchSteamGame());
 
