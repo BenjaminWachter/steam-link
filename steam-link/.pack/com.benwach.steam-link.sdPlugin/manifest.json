@@ -1,37 +1,20 @@
 {
 	"Name": "com.benwach.steam-link.sdPlugin",
-	"Version": "0.1.0.0",
+	"Version": "0.1.2.0",
 	"Author": "BenWach",
 	"Actions": [
 		{
-			"Name": "Counter",
-			"UUID": "com.benwach.steam-link.increment",
-			"Icon": "imgs/actions/counter/icon",
-			"Tooltip": "Displays a count, which increments by one on press.",
-			"PropertyInspectorPath": "ui/increment-counter.html",
-			"Controllers": [
-				"Keypad"
-			],
-			"States": [
-				{
-					"Image": "imgs/actions/counter/key",
-					"TitleAlignment": "middle",
-					"ShowTitle": true
-				}
-			]
-		},
-		{
 			"Name": "Steam List",
 			"UUID": "com.benwach.steam-link.steam-list",
-			"Icon": "imgs/actions/counter/icon",
-			"Tooltip": "Displays a count, which increments by one on press.",
+			"Icon": "imgs/actions/steam-list/icon",
+			"Tooltip": "Displays a list of Steam games.",
 			"PropertyInspectorPath": "ui/steam-list.html",
 			"Controllers": [
 				"Keypad"
 			],
 			"States": [
 				{
-					"Image": "imgs/actions/counter/key",
+					"Image": "imgs/actions/steam-list/key",
 					"TitleAlignment": "middle",
 					"ShowTitle": true
 				}
@@ -40,15 +23,16 @@
 		{
 			"Name": "Launch Steam Game",
 			"UUID": "com.benwach.steam-link.launch-steam-game",
-			"Icon": "imgs/actions/counter/icon",
+			"Icon": "imgs/actions/launch-steam-game/icon",
 			"Tooltip": "Launcher for a steam game.",
 			"PropertyInspectorPath": "ui/launch-steam-game.html",
+			"VisibleInActionsList": false,
 			"Controllers": [
 				"Keypad"
 			],
 			"States": [
 				{
-					"Image": "imgs/actions/counter/key",
+					"Image": "imgs/actions/launch-steam-game/key",
 					"TitleAlignment": "middle",
 					"ShowTitle": true
 				}
