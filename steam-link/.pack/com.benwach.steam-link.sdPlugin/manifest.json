@@ -14,8 +14,9 @@
 			],
 			"States": [
 				{
-					"Image": "imgs/actions/steam-list/key",
+					"Image": "imgs/actions/steam-list/steam-db-white",
 					"TitleAlignment": "middle",
+					"FontFamily": "Oswald",
 					"ShowTitle": true
 				}
 			]
