@@ -5,6 +5,7 @@ const steamAPILogger = streamDeck.logger.createScope("SteamAPI");
 @action({ UUID: "com.benwach.steam-link.steam-list" })
 export class SteamList extends SingletonAction<SteamListSettings> {
     override onWillAppear(ev: WillAppearEvent<SteamListSettings>): void | Promise<void> {
+        AppList.length = 0; // Clear the app list to ensure fresh data on each appearance
         enteryPoint(ev);
     }
 
