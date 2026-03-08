@@ -38,6 +38,20 @@
 					"ShowTitle": true
 				}
 			]
+		},
+		{
+			"Name": "Steam Collection",
+			"UUID": "com.benwach.steam-link.steam-collection",
+			"Icon": "imgs/actions/steam-collection/icon",
+			"PropertyInspectorPath": "ui/steam-collection.html",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/steam-collection/key"
+				}
+			]
 		}
 	],
 	"Category": "com.benwach.steam-link.sdPlugin",

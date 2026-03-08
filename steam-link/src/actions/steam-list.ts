@@ -2,6 +2,8 @@ import streamDeck, { action, KeyDownEvent, SingletonAction, WillAppearEvent } fr
 
 const steamAPILogger = streamDeck.logger.createScope("SteamAPI");
 
+const returnedGamesQuantity = 24; // Number of games to fetch and display, limited by Stream Deck's button capacity
+
 @action({ UUID: "com.benwach.steam-link.steam-list" })
 export class SteamList extends SingletonAction<SteamListSettings> {
     override onWillAppear(ev: WillAppearEvent<SteamListSettings>): void | Promise<void> {
@@ -46,7 +48,7 @@ async function enteryPoint(ev: WillAppearEvent<SteamListSettings> | KeyDownEvent
         steamAPILogger.info(`App List has ${AppList.length} entries.`);
         fetchSteamApps(ev.payload.settings.userID!, ev.payload.settings.apiKey!).then(apps => {
             steamAPILogger.info(`Fetched ${apps.length} apps from Steam API.`);
-            AppList.push(...apps.slice(0, 24)); // Limit to 24 apps for display
+            AppList.push(...apps);
         });
         steamAPILogger.info(`After fetching, App List has ${AppList.length} entries.`);
         ev.action.setImage("imgs/actions/steam-list/steam-db-white");
@@ -58,7 +60,7 @@ async function enteryPoint(ev: WillAppearEvent<SteamListSettings> | KeyDownEvent
 async function fetchSteamApps(userID: string, apiKey: string): Promise<AppListItem[]> {
     steamAPILogger.info(`Fetching Steam Apps for user ${userID} with API key ${apiKey.substring(0, 7)}...`);
     try {
-        const url = `https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key=${apiKey}&steamid=${userID}&count=10&format=json`;
+        const url = `https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key=${apiKey}&steamid=${userID}&count=${returnedGamesQuantity}&format=json`;
 
         const response = await fetch(url);
         const data = await response.text();
