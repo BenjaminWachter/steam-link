@@ -1,23 +1,31 @@
 <!DOCTYPE html>
 <html>
 
-<head lang="en">
-    <title>Steam Collection Settings</title>
-    <meta charset="utf-8" />
-    <script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
-</head>
+    <head lang="en">
+        <title>Steam Collection Settings</title>
+        <meta charset="utf-8" />
+        <script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
+    </head>
 
-<body>
-    <!--
-        Learn more about property inspector components at https://sdpi-components.dev/docs/components
-    -->
-    <sdpi-item label="Steam ID" description="Your 64-bit Steam ID (e.g. 76561198000000000)">
-        <sdpi-textfield setting="userID"></sdpi-textfield>
-    </sdpi-item>
-    
-    <sdpi-item label="Collection Name" description="Name of the Steam collection to display">
-        <sdpi-textfield setting="collectionName"></sdpi-textfield>
-    </sdpi-item>
-</body>
+    <body>
+        <!--
+            Learn more about property inspector components at https://sdpi-components.dev/docs/components
+        -->
+        <sdpi-item label="Steam ID" description="Your 64-bit Steam ID (e.g. 76561198000000000)">
+            <sdpi-textfield setting="userID"></sdpi-textfield>
+        </sdpi-item>
+
+        <sdpi-item label="Collection" description="Choose a Steam collection from discovered collections">
+            <sdpi-select setting="collectionName" id="collectionSelect">
+                <option value="">-- Loading collections --</option>
+            </sdpi-select>
+        </sdpi-item>
+
+        <sdpi-item label="Refresh Collections" description="Click to refresh the list of Steam collections">
+            <sdpi-button id="refreshCollections">Refresh</sdpi-button>
+        </sdpi-item>
+
+        <script src="steam-collection.js"></script>
+    </body>
 
 </html>

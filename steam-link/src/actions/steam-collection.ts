@@ -1,33 +1,89 @@
-import streamDeck, { action, KeyDownEvent, SingletonAction, WillAppearEvent } from "@elgato/streamdeck";
+import streamDeck,  { action, KeyDownEvent, SingletonAction, WillAppearEvent, SendToPluginEvent } from "@elgato/streamdeck";
 import { AppList, AppListItem } from "./steam-list";
 import { exec, ExecException } from "node:child_process";
 import fs from "fs";
-import { start } from "node:repl";
 
 const steamCollectionLogger = streamDeck.logger.createScope("SteamCollection");
+const readJsonLogger = streamDeck.logger.createScope("ReadCollectionJSON");
 
+let collections: any[] = [];
 @action({ UUID: "com.benwach.steam-link.steam-collection" })
 export class SteamCollection extends SingletonAction<SteamCollectionSettings> {
-    override onWillAppear(ev: WillAppearEvent<SteamCollectionSettings>): void | Promise<void> {
-        // No specific action needed on appearance for the collection
+    /**
+     * Called when the Property Inspector appears (user selects the action).
+     * The Property Inspector will automatically connect via WebSocket using connectElgatoStreamDeckSocket(),
+     * then this event fires to initialize and send data to the PI.
+     */
+    override async onWillAppear(ev: WillAppearEvent<SteamCollectionSettings>): Promise<void> {
         steamCollectionLogger.info("Steam Collection action appeared");
+        collections = await readCollection();
+        steamCollectionLogger.info(`Read ${collections.length} collections from file`);
+        await this.SendCollections(ev);
     }
-
+    
     override async onKeyDown(ev: KeyDownEvent<SteamCollectionSettings>): Promise<void> {
         steamCollectionLogger.info(`Key down event received for Steam Collection action.`);
-        const items = await readCCollection(ev);
-        steamCollectionLogger.info(`Retrieved ${items.length} items from steam collection.`);
+        steamCollectionLogger.info(`Retrieved ${collections.length} items from steam collection.`);
+    }
+    
+    /**
+     * Receives messages from the Property Inspector via WebSocket.
+     * The PI sends messages using websocket.send() with event: "sendToPlugin".
+     */
+    override async onSendToPlugin(ev: SendToPluginEvent<any, SteamCollectionSettings>): Promise<void> {
+        steamCollectionLogger.info("=== Message received from Property Inspector ===");
+        steamCollectionLogger.info(`Payload: ${JSON.stringify(ev.payload, null, 2)}`);
+        switch (ev.payload.action) {
+            case "requestCollections":
+            case "refreshCollections":
+                steamCollectionLogger.info("Received request for collections from Property Inspector");
+                collections = await readCollection();
+                steamCollectionLogger.info(`Fetched ${collections.length} collections in response to Property Inspector request`);
+                await this.SendCollections(ev);
+                break;
+            default:
+                steamCollectionLogger.warn(`Unknown action received from Property Inspector: ${ev.payload.action}`);
+        }
+    }
+    
+    /**
+     * Sends collections to the Property Inspector via WebSocket.
+     * The PI receives this via websocket.onmessage as a "sendToPropertyInspector" event.
+     * Also updates the action's settings which triggers "didReceiveSettings" in the PI.
+     */
+    private async SendCollections(ev: WillAppearEvent<SteamCollectionSettings> | KeyDownEvent<SteamCollectionSettings> | SendToPluginEvent<any, SteamCollectionSettings>): Promise<void> {        
+        
+        let collectionNames = collections.map((collection, index) => {
+            const name = collection.name ?? collection.collection_name ?? `Collection ${index + 1}`;
+            steamCollectionLogger.debug(`Collection ${index + 1} name: ${name}`);
+            return name;
+        });
+        steamCollectionLogger.info(`Mapped collection names: ${JSON.stringify(collectionNames)}`);
+        
+        // Update settings - this sends "didReceiveSettings" event to Property Inspector
+        const existingSettings = (ev.payload as { settings?: SteamCollectionSettings } | undefined)?.settings ?? {};
+        await ev.action.setSettings({
+            ...existingSettings,
+            collections: collectionNames
+        });
+        steamCollectionLogger.info(`Settings updated with ${collectionNames.length} collection names`);
+        
+        // Send directly to Property Inspector - this sends "sendToPropertyInspector" event
+        const payload = { collections: collectionNames };
+        await streamDeck.ui.sendToPropertyInspector(payload);
+        steamCollectionLogger.info(`Sent collections directly to property inspector via WebSocket`);
+        steamCollectionLogger.debug(`Payload: ${JSON.stringify(payload)}`);
     }
 }
 
-async function readCCollection(ev: WillAppearEvent<SteamCollectionSettings> | KeyDownEvent<SteamCollectionSettings>): Promise<AppListItem[]> {
+async function readCollection(): Promise<Array<any>> {
     return new Promise((resolve, reject) => {
         let flag = false; // Placeholder for any condition you might want to check before executing the command
         let steamPath;
         if (flag) {
             exec(String("powershell (gp \"HKLM:\\SOFTWARE\\WOW6432Node\\Valve\\Steam\").InstallPath"), (error: ExecException | null, stdout: string) => {
                 if (error) {
-                    steamCollectionLogger.error(`Error executing Steam path command: ${error.message}`);
+                    readJsonLogger.error(`Error executing Steam path command: ${error.message}`);
                     reject(error);
                     return;
                 }
@@ -38,25 +94,88 @@ async function readCCollection(ev: WillAppearEvent<SteamCollectionSettings> | Ke
             steamPath = "C:\\Program Files (x86)\\Steam"; // Default path if command execution is not desired
         }
 
-        const file = String(steamPath + "\\userdata\\" + ev.payload.settings.userID + "\\config\\cloudstorage\\cloud-storage-namespace-1.json");
-        steamCollectionLogger.debug("file path: ", file);
-        fs.readFile(file, "utf-8", (err, data) => {
-            if (err) {
-                steamCollectionLogger.error(`Error reading LevelDB file: ${err.message}`);
-                resolve([]);
-                return;
-            }
-            if (!fs.existsSync(file)) {
-                let steamCollection = JSON.parse(data).key("user-collection.uc-*");
-                steamCollectionLogger.info(`Steam collection data: ${JSON.stringify(steamCollection)}`);
-                resolve(steamCollection);
-            }
-        });
+        const file = String(steamPath + "\\userdata\\" + "180695005" + "\\config\\cloudstorage\\cloud-storage-namespace-1.json");
+        readJsonLogger.debug("file path: ", file);
+
+        // Check if file exists before attempting to read
+        if (!fs.existsSync(file)) {
+            readJsonLogger.error(`Collection file does not exist: ${file}`);
+            resolve([]);
+            return;
+        }
+
+        try {
+            readJsonLogger.debug("Reading collection file...");
+            fs.readFile(file, "utf-8", (err, data) => {
+                if (err) {
+                    readJsonLogger.error(`Error reading collection file: ${err.message}`);
+                    resolve([]);
+                    return;
+                }
+
+                try {
+                    const jsonData = JSON.parse(data);
+                    let collectionKeys = [];
+                    if (!Array.isArray(jsonData)) {
+                        readJsonLogger.warn("Collection JSON root is not an array.");
+                        resolve([]);
+                        return;
+                    }
+
+                    for (let i = jsonData.length - 1; i >= 0; i--) {
+                        const validated = validateJson(jsonData[i], i);
+                        if (!validated) {
+                            continue;
+                        }
+
+                        const { key, parsedValue } = validated;
+
+                        if (!parsedValue?.is_deleted) {
+                            readJsonLogger.trace(`Processing entry ${i} with key ${key}`);
+                            collectionKeys.push(parsedValue);
+                        }
+                    }
+
+                    readJsonLogger.info(`Found ${collectionKeys.length} collections in data`);
+                    resolve(collectionKeys);
+                } catch (parseErr) {
+                    readJsonLogger.error(`Error parsing collection JSON: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`);
+                    resolve([]);
+                }
+            });
+        } catch (err) {
+            readJsonLogger.error(`Error accessing collection file: ${err instanceof Error ? err.message : String(err)}`);
+            resolve([]);
+        }
     });
 }
 
+function validateJson(row: unknown, index: number): { key: string; parsedValue: { name?: string; collection_name?: string; is_deleted?: boolean } } | null {
+    if (!Array.isArray(row) || row.length < 2) {
+        return null;
+    }
+
+    const entry = row[1] as { key?: string; value?: string };
+    if (typeof entry?.key !== "string" || !entry.key.startsWith("user-collections.uc-")) {
+        return null;
+    }
+
+    if (typeof entry.value !== "string" || entry.value.trim() === "") {
+        readJsonLogger.debug(`Skipping entry ${index}: missing collection value.`);
+        return null;
+    }
+
+    try {
+        const parsedValue = JSON.parse(entry.value) as { name?: string; collection_name?: string; is_deleted?: boolean };
+        return { key: entry.key, parsedValue };
+    } catch {
+        readJsonLogger.debug(`Skipping entry ${index}: invalid JSON value.`);
+        return null;
+    }
+}
 
 type SteamCollectionSettings = {
     userID?: string;
     collectionName?: string;
+    collections?: string[];
 };
