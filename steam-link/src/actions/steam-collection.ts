@@ -5,6 +5,8 @@ import fs from "fs";
 
 const steamCollectionLogger = streamDeck.logger.createScope("SteamCollection");
 const readJsonLogger = streamDeck.logger.createScope("ReadCollectionJSON");
+const websocketLogger = streamDeck.logger.createScope("WebSocket");
+
 
 let collections: any[] = [];
 @action({ UUID: "com.benwach.steam-link.steam-collection" })
@@ -16,14 +18,13 @@ export class SteamCollection extends SingletonAction<SteamCollectionSettings> {
      */
     override async onWillAppear(ev: WillAppearEvent<SteamCollectionSettings>): Promise<void> {
         steamCollectionLogger.info("Steam Collection action appeared");
-        collections = await readCollection();
+        collections = await readCollection(ev.payload.settings?.userID ?? 0);
         steamCollectionLogger.info(`Read ${collections.length} collections from file`);
         await this.SendCollections(ev);
     }
     
     override async onKeyDown(ev: KeyDownEvent<SteamCollectionSettings>): Promise<void> {
-        steamCollectionLogger.info(`Key down event received for Steam Collection action.`);
-        steamCollectionLogger.info(`Retrieved ${collections.length} items from steam collection.`);
+
     }
     
     /**
@@ -31,18 +32,18 @@ export class SteamCollection extends SingletonAction<SteamCollectionSettings> {
      * The PI sends messages using websocket.send() with event: "sendToPlugin".
      */
     override async onSendToPlugin(ev: SendToPluginEvent<any, SteamCollectionSettings>): Promise<void> {
-        steamCollectionLogger.info("=== Message received from Property Inspector ===");
-        steamCollectionLogger.info(`Payload: ${JSON.stringify(ev.payload, null, 2)}`);
+        websocketLogger.info("=== Message received from Property Inspector ===");
+        websocketLogger.info(`Payload: ${JSON.stringify(ev.payload, null, 2)}`);
         switch (ev.payload.action) {
             case "requestCollections":
             case "refreshCollections":
-                steamCollectionLogger.info("Received request for collections from Property Inspector");
-                collections = await readCollection();
+                websocketLogger.info("Received request for collections from Property Inspector");
+                collections = await readCollection(ev.payload.settings?.userID ?? 0);
                 steamCollectionLogger.info(`Fetched ${collections.length} collections in response to Property Inspector request`);
                 await this.SendCollections(ev);
                 break;
             default:
-                steamCollectionLogger.warn(`Unknown action received from Property Inspector: ${ev.payload.action}`);
+                websocketLogger.warn(`Unknown action received from Property Inspector: ${ev.payload.action}`);
         }
     }
     
@@ -60,13 +61,12 @@ export class SteamCollection extends SingletonAction<SteamCollectionSettings> {
         });
         steamCollectionLogger.info(`Mapped collection names: ${JSON.stringify(collectionNames)}`);
         
-        // Update settings - this sends "didReceiveSettings" event to Property Inspector
-        const existingSettings = (ev.payload as { settings?: SteamCollectionSettings } | undefined)?.settings ?? {};
-        await ev.action.setSettings({
-            ...existingSettings,
-            collections: collectionNames
-        });
-        steamCollectionLogger.info(`Settings updated with ${collectionNames.length} collection names`);
+        // const existingSettings = (ev.payload as { settings?: SteamCollectionSettings } | undefined)?.settings ?? {};
+        // await ev.action.setSettings({
+        //     ...existingSettings,
+        //     collections: collectionNames
+        // });
+        // steamCollectionLogger.info(`Settings updated with ${collectionNames.length} collection names`);
         
         // Send directly to Property Inspector - this sends "sendToPropertyInspector" event
         const payload = { collections: collectionNames };
@@ -76,7 +76,7 @@ export class SteamCollection extends SingletonAction<SteamCollectionSettings> {
     }
 }
 
-async function readCollection(): Promise<Array<any>> {
+async function readCollection(userID: number): Promise<Array<any>> {
     return new Promise((resolve, reject) => {
         let flag = false; // Placeholder for any condition you might want to check before executing the command
         let steamPath;
@@ -94,7 +94,7 @@ async function readCollection(): Promise<Array<any>> {
             steamPath = "C:\\Program Files (x86)\\Steam"; // Default path if command execution is not desired
         }
 
-        const file = String(steamPath + "\\userdata\\" + "180695005" + "\\config\\cloudstorage\\cloud-storage-namespace-1.json");
+        const file = String(steamPath + "\\userdata\\" + (userID - 76561197960265728) + "\\config\\cloudstorage\\cloud-storage-namespace-1.json");
         readJsonLogger.debug("file path: ", file);
 
         // Check if file exists before attempting to read
@@ -175,7 +175,7 @@ function validateJson(row: unknown, index: number): { key: string; parsedValue: 
 }
 
 type SteamCollectionSettings = {
-    userID?: string;
+    userID?: number;
     collectionName?: string;
     collections?: string[];
 };

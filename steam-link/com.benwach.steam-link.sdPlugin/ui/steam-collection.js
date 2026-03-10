@@ -4,10 +4,6 @@ var pluginUUID = null;
 var actionInfo = {};
 var actionContext = null;
 
-/**
- * Standard entry point for Stream Deck socket connection
- * Called automatically by Stream Deck software
- */
 function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, inInfo, inActionInfo) {
     console.log('=== connectElgatoStreamDeckSocket called ===');
     console.log('Port:', inPort);
@@ -80,15 +76,15 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
                     }
                     break;
                     
-                case 'didReceiveSettings':
-                    console.log('>>> didReceiveSettings:', jsonObj.payload);
-                    if (jsonObj.payload && jsonObj.payload.settings && jsonObj.payload.settings.collections) {
-                        console.log('Collections in settings:', jsonObj.payload.settings.collections);
-                        updateCollectionsSelect(jsonObj.payload.settings.collections);
-                    } else {
-                        console.warn('didReceiveSettings received but no collections found in settings');
-                    }
-                    break;
+                // case 'didReceiveSettings':
+                //     console.log('>>> didReceiveSettings:', jsonObj.payload);
+                //     if (jsonObj.payload && jsonObj.payload.settings && jsonObj.payload.settings.collections) {
+                //         console.log('Collections in settings:', jsonObj.payload.settings.collections);
+                //         updateCollectionsSelect(jsonObj.payload.settings.collections);
+                //     } else {
+                //         console.warn('didReceiveSettings received but no collections found in settings');
+                //     }
+                //     break;
                     
                 default:
                     console.log('>>> Unhandled event type:', jsonObj.event);
@@ -108,9 +104,6 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
 }
 
 function updateCollectionsSelect(collections) {
-    console.log('updateCollectionsSelect called with:', collections);
-    console.log('Type:', typeof collections, 'IsArray:', Array.isArray(collections));
-    
     const select = document.getElementById('collectionSelect');
     if (!select) {
         console.error('Select element not found!');
@@ -142,7 +135,6 @@ function updateCollectionsSelect(collections) {
 }
 
 function readCollectionName(item, index) {
-    console.log('Reading collection item:', item, 'at index:', index);
     if (typeof item === 'string') {
         return item;
     }
@@ -156,8 +148,6 @@ function readCollectionName(item, index) {
             return item.collection_name;
         }
     }
-
-    return `Collection ${index + 1}`;
 }
 
 function sendToPlugin(payload) {
