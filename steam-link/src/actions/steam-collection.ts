@@ -2,6 +2,7 @@ import streamDeck,  { action, KeyDownEvent, SingletonAction, WillAppearEvent, Se
 import { AppList, AppListItem } from "./steam-list";
 import { exec, ExecException } from "node:child_process";
 import fs from "fs";
+import { allowedNodeEnvironmentFlags } from "node:process";
 
 const steamCollectionLogger = streamDeck.logger.createScope("SteamCollection");
 const readJsonLogger = streamDeck.logger.createScope("ReadCollectionJSON");
@@ -27,10 +28,6 @@ export class SteamCollection extends SingletonAction<SteamCollectionSettings> {
 
     }
     
-    /**
-     * Receives messages from the Property Inspector via WebSocket.
-     * The PI sends messages using websocket.send() with event: "sendToPlugin".
-     */
     override async onSendToPlugin(ev: SendToPluginEvent<any, SteamCollectionSettings>): Promise<void> {
         websocketLogger.info("=== Message received from Property Inspector ===");
         websocketLogger.info(`Payload: ${JSON.stringify(ev.payload, null, 2)}`);
@@ -46,12 +43,7 @@ export class SteamCollection extends SingletonAction<SteamCollectionSettings> {
                 websocketLogger.warn(`Unknown action received from Property Inspector: ${ev.payload.action}`);
         }
     }
-    
-    /**
-     * Sends collections to the Property Inspector via WebSocket.
-     * The PI receives this via websocket.onmessage as a "sendToPropertyInspector" event.
-     * Also updates the action's settings which triggers "didReceiveSettings" in the PI.
-     */
+
     private async SendCollections(ev: WillAppearEvent<SteamCollectionSettings> | KeyDownEvent<SteamCollectionSettings> | SendToPluginEvent<any, SteamCollectionSettings>): Promise<void> {        
         
         let collectionNames = collections.map((collection, index) => {
@@ -60,15 +52,7 @@ export class SteamCollection extends SingletonAction<SteamCollectionSettings> {
             return name;
         });
         steamCollectionLogger.info(`Mapped collection names: ${JSON.stringify(collectionNames)}`);
-        
-        // const existingSettings = (ev.payload as { settings?: SteamCollectionSettings } | undefined)?.settings ?? {};
-        // await ev.action.setSettings({
-        //     ...existingSettings,
-        //     collections: collectionNames
-        // });
-        // steamCollectionLogger.info(`Settings updated with ${collectionNames.length} collection names`);
-        
-        // Send directly to Property Inspector - this sends "sendToPropertyInspector" event
+
         const payload = { collections: collectionNames };
         await streamDeck.ui.sendToPropertyInspector(payload);
         steamCollectionLogger.info(`Sent collections directly to property inspector via WebSocket`);

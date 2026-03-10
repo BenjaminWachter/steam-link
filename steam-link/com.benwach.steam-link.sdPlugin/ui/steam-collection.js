@@ -1,4 +1,3 @@
-// Steam Collection Property Inspector - WebSocket connection
 var websocket = null;
 var pluginUUID = null;
 var actionInfo = {};
@@ -29,14 +28,12 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
         }
     }
     
-    // Create the WebSocket connection
     console.log('Creating WebSocket connection to ws://127.0.0.1:' + inPort);
     websocket = new WebSocket('ws://127.0.0.1:' + inPort);
 
     websocket.onopen = function() {
         console.log('=== WebSocket OPENED ===');
         
-        // Register the Property Inspector with Stream Deck
         var json = {
             "event": inRegisterEvent,
             "uuid": inPluginUUID
@@ -44,7 +41,6 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
         console.log('Sending registration:', json);
         websocket.send(JSON.stringify(json));
 
-        // Ask Stream Deck for current settings for this action context.
         const settingsRequest = {
             event: 'getSettings',
             context: actionContext ?? pluginUUID
@@ -52,12 +48,10 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
         console.log('Requesting settings:', settingsRequest);
         websocket.send(JSON.stringify(settingsRequest));
 
-        // Request collections immediately after registration.
         sendToPlugin({ action: 'requestCollections' });
     };
 
     websocket.onmessage = function(evt) {
-        // Handle incoming events from the plugin
         console.log('=== WebSocket MESSAGE RECEIVED ===');
         console.log('Raw data:', evt.data);
         
@@ -66,7 +60,6 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
             console.log('Event type:', jsonObj.event);
             console.log('Parsed message:', jsonObj);
             
-            // Handle different event types
             switch(jsonObj.event) {
                 case 'sendToPropertyInspector':
                     console.log('>>> sendToPropertyInspector payload:', jsonObj.payload);
@@ -75,16 +68,6 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
                         updateCollectionsSelect(jsonObj.payload.collections);
                     }
                     break;
-                    
-                // case 'didReceiveSettings':
-                //     console.log('>>> didReceiveSettings:', jsonObj.payload);
-                //     if (jsonObj.payload && jsonObj.payload.settings && jsonObj.payload.settings.collections) {
-                //         console.log('Collections in settings:', jsonObj.payload.settings.collections);
-                //         updateCollectionsSelect(jsonObj.payload.settings.collections);
-                //     } else {
-                //         console.warn('didReceiveSettings received but no collections found in settings');
-                //     }
-                //     break;
                     
                 default:
                     console.log('>>> Unhandled event type:', jsonObj.event);
