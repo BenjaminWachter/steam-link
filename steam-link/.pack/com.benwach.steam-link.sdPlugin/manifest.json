@@ -1,6 +1,6 @@
 {
 	"Name": "com.benwach.steam-link.sdPlugin",
-	"Version": "0.1.3.0",
+	"Version": "0.1.4.0",
 	"Author": "BenWach",
 	"Actions": [
 		{
@@ -36,6 +36,20 @@
 					"Image": "imgs/actions/launch-steam-game/key",
 					"TitleAlignment": "middle",
 					"ShowTitle": true
+				}
+			]
+		},
+		{
+			"Name": "Steam Collection",
+			"UUID": "com.benwach.steam-link.steam-collection",
+			"Icon": "imgs/actions/steam-collection/icon",
+			"PropertyInspectorPath": "ui/steam-collection.html",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/steam-collection/key"
 				}
 			]
 		}

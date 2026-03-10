@@ -60,7 +60,8 @@ async function enteryPoint(ev: WillAppearEvent<SteamListSettings> | KeyDownEvent
 async function fetchSteamApps(userID: string, apiKey: string): Promise<AppListItem[]> {
     steamAPILogger.info(`Fetching Steam Apps for user ${userID} with API key ${apiKey.substring(0, 7)}...`);
     try {
-        const url = `https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key=${apiKey}&steamid=${userID}&count=${returnedGamesQuantity}&format=json`;
+        // const url = `https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key=${apiKey}&steamid=${userID}&count=${returnedGamesQuantity}&format=json`;
+        const url = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${apiKey}&steamid=${userID}&count=${returnedGamesQuantity}&format=json&include_appinfo=true`;
 
         const response = await fetch(url);
         const data = await response.text();

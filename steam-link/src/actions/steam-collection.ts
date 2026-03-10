@@ -2,7 +2,6 @@ import streamDeck,  { action, KeyDownEvent, SingletonAction, WillAppearEvent, Se
 import { AppList, AppListItem } from "./steam-list";
 import { exec, ExecException } from "node:child_process";
 import fs from "fs";
-import { allowedNodeEnvironmentFlags } from "node:process";
 
 const steamCollectionLogger = streamDeck.logger.createScope("SteamCollection");
 const readJsonLogger = streamDeck.logger.createScope("ReadCollectionJSON");
@@ -51,7 +50,6 @@ export class SteamCollection extends SingletonAction<SteamCollectionSettings> {
             steamCollectionLogger.debug(`Collection ${index + 1} name: ${name}`);
             return name;
         });
-        steamCollectionLogger.info(`Mapped collection names: ${JSON.stringify(collectionNames)}`);
 
         const payload = { collections: collectionNames };
         await streamDeck.ui.sendToPropertyInspector(payload);
