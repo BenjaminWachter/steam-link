@@ -8,9 +8,9 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
     console.log('Port:', inPort);
     console.log('Plugin UUID:', inPluginUUID);
     console.log('Register Event:', inRegisterEvent);
-    
+
     pluginUUID = inPluginUUID;
-    
+
     try {
         actionInfo = JSON.parse(inInfo);
         console.log('Parsed info:', actionInfo);
@@ -27,13 +27,13 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
             console.error('Failed to parse inActionInfo:', e);
         }
     }
-    
+
     console.log('Creating WebSocket connection to ws://127.0.0.1:' + inPort);
     websocket = new WebSocket('ws://127.0.0.1:' + inPort);
 
-    websocket.onopen = function() {
+    websocket.onopen = function () {
         console.log('=== WebSocket OPENED ===');
-        
+
         var json = {
             "event": inRegisterEvent,
             "uuid": inPluginUUID
@@ -51,16 +51,16 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
         sendToPlugin({ action: 'requestCollections' });
     };
 
-    websocket.onmessage = function(evt) {
+    websocket.onmessage = function (evt) {
         console.log('=== WebSocket MESSAGE RECEIVED ===');
         console.log('Raw data:', evt.data);
-        
+
         try {
             const jsonObj = JSON.parse(evt.data);
             console.log('Event type:', jsonObj.event);
             console.log('Parsed message:', jsonObj);
-            
-            switch(jsonObj.event) {
+
+            switch (jsonObj.event) {
                 case 'sendToPropertyInspector':
                     console.log('>>> sendToPropertyInspector payload:', jsonObj.payload);
                     if (jsonObj.payload && jsonObj.payload.collections) {
@@ -87,16 +87,31 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
         }
     };
 
-    websocket.onerror = function(error) {
+    websocket.onerror = function (error) {
         console.error('=== WebSocket ERROR ===', error);
     };
 
-    websocket.onclose = function() {
+    websocket.onclose = function () {
         console.log('=== WebSocket CLOSED ===');
     };
 }
 
 function updateCollectionsSelect(collections) {
+    // Get the previous selection from Stream Deck settings
+    let previousSelection = null;
+    try {
+        // Try to get the previous collectionName from the sdpi-select element
+        const select = document.getElementById('collectionSelect');
+        if (select) {
+            previousSelection = select.value;
+        }
+        // If Stream Deck exposes settings globally, try to read from window.settings
+        if (window.settings && window.settings.collectionName) {
+            previousSelection = window.settings.collectionName;
+        }
+    } catch (e) {
+        previousSelection = null;
+    }
     const select = document.getElementById('collectionSelect');
     if (!select) {
         console.error('Select element not found!');
@@ -105,7 +120,7 @@ function updateCollectionsSelect(collections) {
 
     console.log('Found select element, clearing options');
     select.innerHTML = '';
-    
+
     if (!Array.isArray(collections) || collections.length === 0) {
         console.warn('No collections to display');
         const defaultOption = document.createElement('option');
@@ -116,14 +131,23 @@ function updateCollectionsSelect(collections) {
     }
 
     console.log(`Creating ${collections.length} options`);
+    let foundPrevious = false;
     collections.forEach((item, index) => {
         const name = readCollectionName(item, index);
         console.log(`Creating option ${index}: ${name}`);
         const option = document.createElement('option');
         option.value = name;
         option.textContent = name;
+        if (previousSelection && name === previousSelection) {
+            option.selected = true;
+            foundPrevious = true;
+        }
         select.appendChild(option);
     });
+    // If previous selection was not found, default to first option
+    if (!foundPrevious && select.options.length > 0) {
+        select.options[0].selected = true;
+    }
     console.log('Options created successfully');
 }
 

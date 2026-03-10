@@ -2,11 +2,12 @@ import streamDeck, { action, KeyDownEvent, SingletonAction, WillAppearEvent } fr
 
 const steamAPILogger = streamDeck.logger.createScope("SteamAPI");
 
-const returnedGamesQuantity = 24; // Number of games to fetch and display, limited by Stream Deck's button capacity
+let settings: SteamListSettings = {};
 
 @action({ UUID: "com.benwach.steam-link.steam-list" })
 export class SteamList extends SingletonAction<SteamListSettings> {
     override onWillAppear(ev: WillAppearEvent<SteamListSettings>): void | Promise<void> {
+        settings = ev.payload.settings;
         AppList.length = 0; // Clear the app list to ensure fresh data on each appearance
         enteryPoint(ev);
     }
@@ -46,7 +47,7 @@ async function enteryPoint(ev: WillAppearEvent<SteamListSettings> | KeyDownEvent
 
     if (AppList.length === 0) {
         steamAPILogger.info(`App List has ${AppList.length} entries.`);
-        fetchSteamApps(ev.payload.settings.userID!, ev.payload.settings.apiKey!).then(apps => {
+        fetchSteamApps(undefined, true).then(apps => {
             steamAPILogger.info(`Fetched ${apps.length} apps from Steam API.`);
             AppList.push(...apps);
         });
@@ -57,12 +58,17 @@ async function enteryPoint(ev: WillAppearEvent<SteamListSettings> | KeyDownEvent
     steamAPILogger.info(`Steam List action appeared`);
 }
 
-async function fetchSteamApps(userID: string, apiKey: string): Promise<AppListItem[]> {
+export async function fetchSteamApps(appIDs: number[] | undefined, favorites: boolean | undefined): Promise<AppListItem[]> {
+    let userID = settings.userID ?? -1;
+    let apiKey = settings.apiKey ?? "";
+    let url = "";
     steamAPILogger.info(`Fetching Steam Apps for user ${userID} with API key ${apiKey.substring(0, 7)}...`);
     try {
-        // const url = `https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key=${apiKey}&steamid=${userID}&count=${returnedGamesQuantity}&format=json`;
-        const url = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${apiKey}&steamid=${userID}&count=${returnedGamesQuantity}&format=json&include_appinfo=true`;
-
+        if (favorites) {
+            url = `https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key=${apiKey}&steamid=${userID}&format=json`;
+        } else {
+            url = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${apiKey}&steamid=${userID}&format=json&include_appinfo=true&appids_filter=${appIDs ? appIDs.join(",") : ""}`;
+        }
         const response = await fetch(url);
         const data = await response.text();
         const gamesList = JSON.parse(data).response?.games;

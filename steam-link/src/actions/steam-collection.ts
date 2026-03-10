@@ -1,5 +1,5 @@
 import streamDeck,  { action, KeyDownEvent, SingletonAction, WillAppearEvent, SendToPluginEvent } from "@elgato/streamdeck";
-import { AppList, AppListItem } from "./steam-list";
+import { AppList, AppListItem, fetchSteamApps } from "./steam-list";
 import { exec, ExecException } from "node:child_process";
 import fs from "fs";
 
