@@ -7,42 +7,32 @@ const steamCollectionLogger = streamDeck.logger.createScope("SteamCollection");
 const readJsonLogger = streamDeck.logger.createScope("ReadCollectionJSON");
 const websocketLogger = streamDeck.logger.createScope("WebSocket");
 
-
 let collections: any[] = [];
 @action({ UUID: "com.benwach.steam-link.steam-collection" })
 export class SteamCollection extends SingletonAction<SteamCollectionSettings> {
-    /**
-     * Called when the Property Inspector appears (user selects the action).
-     * The Property Inspector will automatically connect via WebSocket using connectElgatoStreamDeckSocket(),
-     * then this event fires to initialize and send data to the PI.
-     */
     override async onWillAppear(ev: WillAppearEvent<SteamCollectionSettings>): Promise<void> {
         steamCollectionLogger.info("Steam Collection action appeared");
-        collections = await readCollection(ev.payload.settings?.userID ?? 0);
+        collections = await readCollection(ev.payload.settings?.userID ?? -1);
         steamCollectionLogger.info(`Read ${collections.length} collections from file`);
         await this.SendCollections(ev);
     }
     
     override async onKeyDown(ev: KeyDownEvent<SteamCollectionSettings>): Promise<void> {
-
     }
     
     override async onSendToPlugin(ev: SendToPluginEvent<any, SteamCollectionSettings>): Promise<void> {
-        websocketLogger.info("=== Message received from Property Inspector ===");
-        websocketLogger.info(`Payload: ${JSON.stringify(ev.payload, null, 2)}`);
         switch (ev.payload.action) {
             case "requestCollections":
             case "refreshCollections":
-                websocketLogger.info("Received request for collections from Property Inspector");
-                collections = await readCollection(ev.payload.settings?.userID ?? 0);
+                collections = await readCollection(ev.payload.settings?.userID ?? -1);
                 steamCollectionLogger.info(`Fetched ${collections.length} collections in response to Property Inspector request`);
                 await this.SendCollections(ev);
                 break;
             default:
-                websocketLogger.warn(`Unknown action received from Property Inspector: ${ev.payload.action}`);
+                steamCollectionLogger.warn(`Unknown action received from Property Inspector: ${ev.payload.action}`);
         }
     }
-
+    
     private async SendCollections(ev: WillAppearEvent<SteamCollectionSettings> | KeyDownEvent<SteamCollectionSettings> | SendToPluginEvent<any, SteamCollectionSettings>): Promise<void> {        
         
         let collectionNames = collections.map((collection, index) => {
@@ -50,7 +40,17 @@ export class SteamCollection extends SingletonAction<SteamCollectionSettings> {
             steamCollectionLogger.debug(`Collection ${index + 1} name: ${name}`);
             return name;
         });
-
+        steamCollectionLogger.info(`Mapped collection names: ${JSON.stringify(collectionNames)}`);
+        
+        // Update settings - this sends "didReceiveSettings" event to Property Inspector
+        const existingSettings = (ev.payload as { settings?: SteamCollectionSettings } | undefined)?.settings ?? {};
+        await ev.action.setSettings({
+            ...existingSettings,
+            collections: collectionNames
+        });
+        steamCollectionLogger.info(`Settings updated with ${collectionNames.length} collection names`);
+        
+        // Send directly to Property Inspector - this sends "sendToPropertyInspector" event
         const payload = { collections: collectionNames };
         await streamDeck.ui.sendToPropertyInspector(payload);
         steamCollectionLogger.info(`Sent collections directly to property inspector via WebSocket`);
@@ -76,7 +76,7 @@ async function readCollection(userID: number): Promise<Array<any>> {
             steamPath = "C:\\Program Files (x86)\\Steam"; // Default path if command execution is not desired
         }
 
-        const file = String(steamPath + "\\userdata\\" + (userID - 76561197960265728) + "\\config\\cloudstorage\\cloud-storage-namespace-1.json");
+        const file = String(steamPath + "\\userdata\\" + userID + "\\config\\cloudstorage\\cloud-storage-namespace-1.json");
         readJsonLogger.debug("file path: ", file);
 
         // Check if file exists before attempting to read
