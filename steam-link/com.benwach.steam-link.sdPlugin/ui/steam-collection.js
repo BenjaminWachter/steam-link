@@ -1,200 +1,128 @@
-var websocket = null;
-var pluginUUID = null;
-var actionInfo = {};
-var actionContext = null;
+const streamDeckClient = window.SDPIComponents?.streamDeckClient;
 
-function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, inInfo, inActionInfo) {
-    console.log('=== connectElgatoStreamDeckSocket called ===');
-    console.log('Port:', inPort);
-    console.log('Plugin UUID:', inPluginUUID);
-    console.log('Register Event:', inRegisterEvent);
+let currentSettings = {};
 
-    pluginUUID = inPluginUUID;
-
-    try {
-        actionInfo = JSON.parse(inInfo);
-        console.log('Parsed info:', actionInfo);
-    } catch (e) {
-        console.error('Failed to parse inInfo:', e);
-    }
-
-    if (inActionInfo) {
-        try {
-            var parsedActionInfo = JSON.parse(inActionInfo);
-            actionContext = parsedActionInfo?.context ?? null;
-            console.log('Parsed action context:', actionContext);
-        } catch (e) {
-            console.error('Failed to parse inActionInfo:', e);
-        }
-    }
-
-    console.log('Creating WebSocket connection to ws://127.0.0.1:' + inPort);
-    websocket = new WebSocket('ws://127.0.0.1:' + inPort);
-
-    websocket.onopen = function () {
-        console.log('=== WebSocket OPENED ===');
-
-        var json = {
-            "event": inRegisterEvent,
-            "uuid": inPluginUUID
-        };
-        console.log('Sending registration:', json);
-        websocket.send(JSON.stringify(json));
-
-        const settingsRequest = {
-            event: 'getSettings',
-            context: actionContext ?? pluginUUID
-        };
-        console.log('Requesting settings:', settingsRequest);
-        websocket.send(JSON.stringify(settingsRequest));
-
-        sendToPlugin({ action: 'requestCollections' });
-    };
-
-    websocket.onmessage = function (evt) {
-        console.log('=== WebSocket MESSAGE RECEIVED ===');
-        console.log('Raw data:', evt.data);
-
-        try {
-            const jsonObj = JSON.parse(evt.data);
-            console.log('Event type:', jsonObj.event);
-            console.log('Parsed message:', jsonObj);
-
-            switch (jsonObj.event) {
-                case 'sendToPropertyInspector':
-                    console.log('>>> sendToPropertyInspector payload:', jsonObj.payload);
-                    if (jsonObj.payload && jsonObj.payload.collections) {
-                        console.log('Collections received:', jsonObj.payload.collections);
-                        updateCollectionsSelect(jsonObj.payload.collections);
-                    }
-                    break;
-                    
-                case 'didReceiveSettings':
-                    console.log('>>> didReceiveSettings:', jsonObj.payload);
-                    if (jsonObj.payload && jsonObj.payload.settings && jsonObj.payload.settings.collections) {
-                        console.log('Collections in settings:', jsonObj.payload.settings.collections);
-                        updateCollectionsSelect(jsonObj.payload.settings.collections);
-                    } else {
-                        console.warn('didReceiveSettings received but no collections found in settings');
-                    }
-                    break;
-                    
-                default:
-                    console.log('>>> Unhandled event type:', jsonObj.event);
+function updateDOM(domID) {
+    switch (domID) {
+        case 'userID': {
+            const userIdInput = document.getElementById(domID);
+            if (userIdInput && typeof currentSettings.userID === 'string') {
+                userIdInput.value = currentSettings.userID;
             }
-        } catch (e) {
-            console.error('Failed to parse message:', e);
+            break;
         }
-    };
-
-    websocket.onerror = function (error) {
-        console.error('=== WebSocket ERROR ===', error);
-    };
-
-    websocket.onclose = function () {
-        console.log('=== WebSocket CLOSED ===');
-    };
+        default:
+            console.warn('Unknown DOM ID:', domID);
+    }
 }
 
-function updateCollectionsSelect(collections) {
-    // Get the previous selection from Stream Deck settings
-    let previousSelection = null;
+function saveSettings() {
+    if (!streamDeckClient) {
+        console.warn('streamDeckClient unavailable; cannot save settings.');
+        return;
+    }
+
+    console.log('Saving settings:', currentSettings);
+    streamDeckClient.setSettings(currentSettings);
+    streamDeckClient.setGlobalSettings({
+        userID: currentSettings.userID
+    });
+}
+
+function syncUserIdFromInput(userIdInput, shouldSave) {
+    if (!userIdInput) {
+        return;
+    }
+
+    currentSettings.userID = typeof userIdInput.value === 'string' ? userIdInput.value.trim() : '';
+    console.log('PI userID updated:', currentSettings.userID);
+
+    if (shouldSave) {
+        saveSettings();
+    }
+}
+
+async function requestCollections(isRefresh = false) {
+    if (!streamDeckClient) {
+        console.warn('streamDeckClient unavailable; cannot request collections.');
+        return;
+    }
+
+    await streamDeckClient.send('sendToPlugin', {
+        event: 'requestCollections',
+        isRefresh
+    });
+}
+
+async function initializeSettings() {
+    if (!streamDeckClient) {
+        console.warn('streamDeckClient unavailable; cannot initialize settings.');
+        return;
+    }
+
     try {
-        // Try to get the previous collectionName from the sdpi-select element
-        const select = document.getElementById('collectionSelect');
-        if (select) {
-            previousSelection = select.value;
-        }
-        // If Stream Deck exposes settings globally, try to read from window.settings
-        if (window.settings && window.settings.collectionName) {
-            previousSelection = window.settings.collectionName;
-        }
-    } catch (e) {
-        previousSelection = null;
-    }
-    const select = document.getElementById('collectionSelect');
-    if (!select) {
-        console.error('Select element not found!');
-        return;
-    }
+        const [{ settings }, globalSettings] = await Promise.all([
+            streamDeckClient.getSettings(),
+            streamDeckClient.getGlobalSettings()
+        ]);
 
-    console.log('Found select element, clearing options');
-    select.innerHTML = '';
-
-    if (!Array.isArray(collections) || collections.length === 0) {
-        console.warn('No collections to display');
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        defaultOption.textContent = '-- No collections found --';
-        select.appendChild(defaultOption);
-        return;
+        currentSettings = {
+            ...globalSettings,
+            ...settings
+        };
+        updateDOM('userID');
+    } catch (error) {
+        console.error('Failed to initialize PI settings:', error);
     }
-
-    console.log(`Creating ${collections.length} options`);
-    let foundPrevious = false;
-    collections.forEach((item, index) => {
-        const name = readCollectionName(item, index);
-        console.log(`Creating option ${index}: ${name}`);
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        if (previousSelection && name === previousSelection) {
-            option.selected = true;
-            foundPrevious = true;
-        }
-        select.appendChild(option);
-    });
-    // If previous selection was not found, default to first option
-    if (!foundPrevious && select.options.length > 0) {
-        select.options[0].selected = true;
-    }
-    console.log('Options created successfully');
 }
 
-function readCollectionName(item, index) {
-    if (typeof item === 'string') {
-        return item;
+document.addEventListener('DOMContentLoaded', async () => {
+    const userIdInput = document.getElementById('userID');
+    const collectionSelect = document.getElementById('collectionSelect');
+
+    await initializeSettings();
+
+    if (streamDeckClient) {
+        streamDeckClient.didReceiveSettings.subscribe((event) => {
+            currentSettings = event.payload?.settings ?? {};
+            updateDOM('userID');
+        });
+
+        streamDeckClient.didReceiveGlobalSettings.subscribe((event) => {
+            const globalSettings = event.payload?.settings ?? {};
+            currentSettings = {
+                ...globalSettings,
+                ...currentSettings
+            };
+            updateDOM('userID');
+        });
+
+        streamDeckClient.sendToPropertyInspector.subscribe((event) => {
+            console.log('sendToPropertyInspector:', event.payload);
+        });
     }
 
-    if (item && typeof item === 'object') {
-        if (typeof item.name === 'string' && item.name.trim() !== '') {
-            return item.name;
-        }
+    if (userIdInput) {
+        userIdInput.addEventListener('input', () => {
+            syncUserIdFromInput(userIdInput, true);
+        });
 
-        if (typeof item.collection_name === 'string' && item.collection_name.trim() !== '') {
-            return item.collection_name;
-        }
+        userIdInput.addEventListener('change', () => {
+            syncUserIdFromInput(userIdInput, true);
+        });
+
+        userIdInput.addEventListener('blur', () => {
+            syncUserIdFromInput(userIdInput, true);
+        });
     }
 
-    return `Collection ${index + 1}`;
-}
+    if (collectionSelect) {
+        collectionSelect.addEventListener('valuechange', () => {
+            currentSettings.collectionSelection = collectionSelect.value;
+            currentSettings.collectionSelectionLabel = collectionSelect.selectedOptions?.[0]?.textContent ?? currentSettings.collectionSelection;
+            saveSettings();
+        });
 
-function sendToPlugin(payload) {
-    if (!websocket || websocket.readyState !== WebSocket.OPEN) {
-        console.warn('WebSocket not connected; cannot send to plugin yet.');
-        return;
+        requestCollections();
     }
-
-    const message = {
-        action: 'com.benwach.steam-link.steam-collection',
-        event: 'sendToPlugin',
-        context: pluginUUID,
-        payload
-    };
-
-    console.log('Sending to plugin:', message);
-    websocket.send(JSON.stringify(message));
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    const refreshBtn = document.getElementById('refreshCollections');
-    if (!refreshBtn) {
-        return;
-    }
-
-    refreshBtn.addEventListener('click', () => {
-        sendToPlugin({ action: 'requestCollections' });
-    });
 });
-
-console.log('steam-collection.js loaded successfully');

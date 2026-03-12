@@ -12,17 +12,18 @@
             Learn more about property inspector components at https://sdpi-components.dev/docs/components
         -->
         <sdpi-item label="Steam ID" description="Your 64-bit Steam ID (e.g. 76561198000000000)">
-            <sdpi-textfield setting="userID"></sdpi-textfield>
+            <sdpi-textfield id="userID" placeholder="76561198000000000"></sdpi-textfield>
         </sdpi-item>
 
         <sdpi-item label="Collection" description="Choose a Steam collection from discovered collections">
-            <sdpi-select setting="collectionName" id="collectionSelect">
-                <option value="">-- Loading collections --</option>
-            </sdpi-select>
-        </sdpi-item>
-
-        <sdpi-item label="Refresh Collections" description="Click to refresh the list of Steam collections">
-            <sdpi-button id="refreshCollections">Refresh</sdpi-button>
+            <sdpi-select
+                setting="collectionSelection"
+                label-setting="collectionSelectionLabel"
+                id="collectionSelect"
+                datasource="requestCollections"
+                loading="Loading collections..."
+                show-refresh
+            ></sdpi-select>
         </sdpi-item>
 
         <script src="steam-collection.js"></script>
