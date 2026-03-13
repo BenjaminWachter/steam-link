@@ -1,13 +1,11 @@
 import streamDeck, { action, KeyDownEvent, SingletonAction, WillAppearEvent, SendToPluginEvent, DidReceiveSettingsEvent } from "@elgato/streamdeck";
-import { AppList, AppListItem, fetchSteamApps } from "./steam-list";
+import { AppList, fetchSteamApps } from "./steam-list";
 import { exec, ExecException } from "node:child_process";
 import fs from "fs";
-import { send } from "node:process";
 
 
 const steamCollectionLogger = streamDeck.logger.createScope("SteamCollection");
 const readJsonLogger = streamDeck.logger.createScope("ReadCollectionJSON");
-const websocketLogger = streamDeck.logger.createScope("WebSocket");
 
 let collections: Array<any> = [];
 let cachedSettings: SteamCollectionSettings = {};
@@ -72,7 +70,7 @@ export class SteamCollection extends SingletonAction<SteamCollectionSettings> {
     override async onDidReceiveSettings(ev: DidReceiveSettingsEvent<SteamCollectionSettings>): Promise<void> {
         steamCollectionLogger.info(`Settings updated for action ${ev.action.id}`);
         cachedSettings = ev.payload.settings;
-        steamCollectionLogger.info(`onDidReceiveSettings payload: ${JSON.stringify(cachedSettings)}`);
+        steamCollectionLogger.debug(`onDidReceiveSettings payload: ${JSON.stringify(cachedSettings)}`);
 
         if (cachedSettings.userID) {
             await streamDeck.settings.setGlobalSettings<SteamCollectionGlobalSettings>({
@@ -85,7 +83,6 @@ export class SteamCollection extends SingletonAction<SteamCollectionSettings> {
 
 async function readCollection(userID: string): Promise<Array<any>> {
     return new Promise((resolve, reject) => {
-        let flag = true; // Placeholder for any condition you might want to check before executing the command
         let steamPath = "C:\\Program Files (x86)\\Steam";
         exec("powershell (gp \"HKLM:\\SOFTWARE\\WOW6432Node\\Valve\\Steam\").InstallPath", (error: ExecException | null, stdout: string) => {
             if (error) {
