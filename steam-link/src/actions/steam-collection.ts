@@ -1,5 +1,5 @@
 import streamDeck, { action, KeyDownEvent, SingletonAction, WillAppearEvent, SendToPluginEvent, DidReceiveSettingsEvent } from "@elgato/streamdeck";
-import { AppList, fetchSteamApps } from "./steam-list";
+import { fetchSteamApps } from "./steam-list";
 import { exec, ExecException } from "node:child_process";
 import fs from "fs";
 
@@ -9,7 +9,6 @@ const readJsonLogger = streamDeck.logger.createScope("ReadCollectionJSON");
 
 let collections: Array<any> = [];
 let cachedSettings: SteamCollectionSettings = {};
-let appList = [];
 
 @action({ UUID: "com.benwach.steam-link.steam-collection" })
 export class SteamCollection extends SingletonAction<SteamCollectionSettings> {
@@ -25,6 +24,13 @@ export class SteamCollection extends SingletonAction<SteamCollectionSettings> {
             }
         }
 
+        if (!cachedSettings.apiKey) {
+            const globalSettings = await streamDeck.settings.getGlobalSettings<SteamCollectionGlobalSettings>();
+            if (globalSettings.apiKey) {
+                cachedSettings.apiKey = globalSettings.apiKey;
+            }
+        }
+        
         steamCollectionLogger.info("Steam Collection action appeared");
         steamCollectionLogger.info(`onWillAppear settings: ${JSON.stringify(cachedSettings)}`);
         collections = await readCollection(cachedSettings.userID ?? "-1");
@@ -33,10 +39,10 @@ export class SteamCollection extends SingletonAction<SteamCollectionSettings> {
     }
 
     override async onKeyDown(ev: KeyDownEvent<SteamCollectionSettings>): Promise<void> {
-        fetchSteamApps(collections.flatMap((selection) => selection.appids ?? []), false).then((apps) => {
-            steamCollectionLogger.info(`Fetched ${apps.length} apps for collection appIDs`);
-            AppList.push(...apps);
-        });
+        const gamesToFetch = getAddedValuesForSelectedCollection(collections, cachedSettings.collectionSelection);
+        steamCollectionLogger.info(`Selected collection '${cachedSettings.collectionSelection ?? ""}' resolved to ${gamesToFetch.length} app ids`);
+
+        await fetchSteamApps(gamesToFetch, false, cachedSettings.userID, cachedSettings.apiKey);
         await streamDeck.profiles.switchToProfile(ev.action.device.id, "Steam Apps (auto)");
     }
 
@@ -77,8 +83,37 @@ export class SteamCollection extends SingletonAction<SteamCollectionSettings> {
                 userID: cachedSettings.userID
             });
         }
+        if (cachedSettings.apiKey) {
+            await streamDeck.settings.setGlobalSettings<SteamCollectionGlobalSettings>({
+                apiKey: cachedSettings.apiKey
+            });
+        }
+        if (cachedSettings.collectionSelection) {
+            cachedSettings.collectionSelection = ev.payload.settings.collectionSelection;
+        }
         ev.action.setTitle(cachedSettings.collectionSelection ?? "No Collection");
     }
+}
+
+function getAddedValuesForSelectedCollection(allCollections: Array<any>, selectedName?: string): number[] {
+    if (!selectedName || !Array.isArray(allCollections)) {
+        return [];
+    }
+
+    const selectedCollection = allCollections.find((collection) => collection?.name === selectedName) as ParsedCollection | undefined;
+    const added = Array.isArray(selectedCollection?.added) ? selectedCollection.added : [];
+
+    return added
+        .map((entry) => {
+            const raw =
+                typeof entry === "object" && entry !== null
+                    ? (entry as any).value ?? (entry as any).appid ?? (entry as any).id
+                    : entry;
+
+            const id = typeof raw === "number" ? raw : Number.parseInt(String(raw), 10);
+            return Number.isNaN(id) ? undefined : id;
+        })
+        .filter((id): id is number => typeof id === "number");
 }
 
 async function readCollection(userID: string): Promise<Array<any>> {
@@ -114,29 +149,28 @@ async function readCollection(userID: string): Promise<Array<any>> {
 
                 try {
                     const jsonData = JSON.parse(data);
-                    let collectionKeys = [];
                     if (!Array.isArray(jsonData)) {
                         readJsonLogger.warn("Collection JSON root is not an array.");
                         resolve([]);
                         return;
                     }
 
-                    for (let i = jsonData.length - 1; i >= 0; i--) {
-                        const validated = validateJson(jsonData[i], i);
-                        if (!validated) {
-                            continue;
-                        }
+                    const parsedCollections = jsonData
+                        .slice()
+                        .reverse()
+                        .map((row, index) => validateJson(row, index))
+                        .filter((row): row is { key: string; parsedValue: ParsedCollection } => row !== null)
+                        .filter((row) => {
+                            const keep = !row.parsedValue?.is_deleted;
+                            if (keep) {
+                                readJsonLogger.trace(`Processing key ${row.key}`);
+                            }
+                            return keep;
+                        })
+                        .map((row) => row.parsedValue);
 
-                        const { key, parsedValue } = validated;
-
-                        if (!parsedValue?.is_deleted) {
-                            readJsonLogger.trace(`Processing entry ${i} with key ${key}`);
-                            collectionKeys.push(parsedValue);
-                        }
-                    }
-
-                    readJsonLogger.info(`Found ${collectionKeys.length} collections in data`);
-                    resolve(collectionKeys);
+                    readJsonLogger.info(`Found ${parsedCollections.length} collections in data`);
+                    resolve(parsedCollections);
                 } catch (parseErr) {
                     readJsonLogger.error(`Error parsing collection JSON: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`);
                     resolve([]);
@@ -149,7 +183,7 @@ async function readCollection(userID: string): Promise<Array<any>> {
     });
 }
 
-function validateJson(row: unknown, index: number): { key: string; parsedValue: { name?: string; is_deleted?: boolean } } | null {
+function validateJson(row: unknown, index: number): { key: string; parsedValue: ParsedCollection } | null {
     if (!Array.isArray(row) || row.length < 2) {
         return null;
     }
@@ -165,7 +199,7 @@ function validateJson(row: unknown, index: number): { key: string; parsedValue: 
     }
 
     try {
-        const parsedValue = JSON.parse(entry.value) as { name?: string; is_deleted?: boolean };
+        const parsedValue = JSON.parse(entry.value) as ParsedCollection;
         return { key: entry.key, parsedValue };
     } catch {
         readJsonLogger.debug(`Skipping entry ${index}: invalid JSON value.`);
@@ -173,12 +207,20 @@ function validateJson(row: unknown, index: number): { key: string; parsedValue: 
     }
 }
 
+type ParsedCollection = {
+    name?: string;
+    is_deleted?: boolean;
+    added?: unknown[];
+};
+
 type SteamCollectionSettings = {
     userID?: string;
+    apiKey?: string;
     collectionSelection?: string;
     collectionNames?: string[];
 };
 
 type SteamCollectionGlobalSettings = {
     userID?: string;
+    apiKey?: string;
 };
