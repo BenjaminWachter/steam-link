@@ -15,6 +15,7 @@
 			],
 			"States": [
 				{
+					"Image": "imgs/actions/launch-steam-game/the-blank-nothingness",
 					"TitleAlignment": "middle",
 					"ShowTitle": true
 				}
@@ -35,7 +36,7 @@
 			]
 		}
 	],
-	"Category": "com.benwach.steam-link.sdPlugin",
+	"Category": "Steam Collections",
 	"CategoryIcon": "imgs/plugin/steam-icon-white-outline",
 	"CodePath": "bin/plugin.js",
 	"Description": "A plugin for the Elgato Stream Deck that reads a steam profile and creates quick start buttons.",
