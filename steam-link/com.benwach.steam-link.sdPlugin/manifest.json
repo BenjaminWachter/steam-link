@@ -1,26 +1,8 @@
 {
-	"Name": "com.benwach.steam-link.sdPlugin",
-	"Version": "0.1.4.0",
+	"Name": "Steam Collections",
+	"Version": "0.1.5.0",
 	"Author": "BenWach",
 	"Actions": [
-		{
-			"Name": "Steam List",
-			"UUID": "com.benwach.steam-link.steam-list",
-			"Icon": "imgs/actions/steam-list/icon",
-			"Tooltip": "Displays a list of Steam games.",
-			"PropertyInspectorPath": "ui/steam-list.html",
-			"Controllers": [
-				"Keypad"
-			],
-			"States": [
-				{
-					"Image": "imgs/actions/steam-list/steam-db-white",
-					"TitleAlignment": "middle",
-					"FontFamily": "Oswald",
-					"ShowTitle": true
-				}
-			]
-		},
 		{
 			"Name": "Launch Steam Game",
 			"UUID": "com.benwach.steam-link.launch-steam-game",
@@ -33,7 +15,6 @@
 			],
 			"States": [
 				{
-					"Image": "imgs/actions/launch-steam-game/key",
 					"TitleAlignment": "middle",
 					"ShowTitle": true
 				}
@@ -49,13 +30,13 @@
 			],
 			"States": [
 				{
-					"Image": "imgs/actions/steam-collection/key"
+					"Image": "imgs/actions/steam-collection/steam-db-white"
 				}
 			]
 		}
 	],
 	"Category": "com.benwach.steam-link.sdPlugin",
-	"CategoryIcon": "imgs/plugin/category-icon",
+	"CategoryIcon": "imgs/plugin/steam-icon-white-outline",
 	"CodePath": "bin/plugin.js",
 	"Description": "A plugin for the Elgato Stream Deck that reads a steam profile and creates quick start buttons.",
 	"Icon": "imgs/plugin/marketplace",

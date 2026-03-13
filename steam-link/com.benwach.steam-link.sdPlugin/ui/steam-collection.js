@@ -9,6 +9,13 @@ function updateDOM(domID) {
             if (userIdInput && typeof currentSettings.userID === 'string') {
                 userIdInput.value = currentSettings.userID;
             }
+        break;
+        }
+        case 'apiKey': {
+            const apiKeyInput = document.getElementById(domID);
+            if (apiKeyInput && typeof currentSettings.apiKey === 'string') {
+                apiKeyInput.value = currentSettings.apiKey;
+            }
             break;
         }
         default:
@@ -25,7 +32,8 @@ function saveSettings() {
     console.log('Saving settings:', currentSettings);
     streamDeckClient.setSettings(currentSettings);
     streamDeckClient.setGlobalSettings({
-        userID: currentSettings.userID
+        userID: currentSettings.userID,
+        apiKey: currentSettings.apiKey
     });
 }
 
@@ -36,6 +44,19 @@ function syncUserIdFromInput(userIdInput, shouldSave) {
 
     currentSettings.userID = typeof userIdInput.value === 'string' ? userIdInput.value.trim() : '';
     console.log('PI userID updated:', currentSettings.userID);
+
+    if (shouldSave) {
+        saveSettings();
+    }
+}
+
+function syncApiKeyFromInput(apiKeyInput, shouldSave) {
+    if (!apiKeyInput) {
+        return;
+    }
+
+    currentSettings.apiKey = typeof apiKeyInput.value === 'string' ? apiKeyInput.value.trim() : '';
+    console.log('PI apiKey updated:', currentSettings.apiKey);
 
     if (shouldSave) {
         saveSettings();
@@ -71,6 +92,7 @@ async function initializeSettings() {
             ...settings
         };
         updateDOM('userID');
+        updateDOM('apiKey');
     } catch (error) {
         console.error('Failed to initialize PI settings:', error);
     }
@@ -79,6 +101,7 @@ async function initializeSettings() {
 document.addEventListener('DOMContentLoaded', async () => {
     const userIdInput = document.getElementById('userID');
     const collectionSelect = document.getElementById('collectionSelect');
+    const apiKeyInput = document.getElementById('apiKey');
 
     await initializeSettings();
 
@@ -101,6 +124,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('sendToPropertyInspector:', event.payload);
         });
     }
+  
+    if (streamDeckClient) {
+        streamDeckClient.didReceiveSettings.subscribe((event) => {
+            currentSettings = event.payload?.settings ?? {};
+            updateDOM('apiKey');
+        });
+
+        streamDeckClient.didReceiveGlobalSettings.subscribe((event) => {
+            const globalSettings = event.payload?.settings ?? {};
+            currentSettings = {
+                ...globalSettings,
+                ...currentSettings
+            };
+            updateDOM('apiKey');
+        });
+
+        streamDeckClient.sendToPropertyInspector.subscribe((event) => {
+            console.log('sendToPropertyInspector:', event.payload);
+        });
+    }
 
     if (userIdInput) {
         userIdInput.addEventListener('input', () => {
@@ -113,6 +156,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         userIdInput.addEventListener('blur', () => {
             syncUserIdFromInput(userIdInput, true);
+        });
+    }
+    
+    if (apiKeyInput) {
+        apiKeyInput.addEventListener('input', () => {
+            syncApiKeyFromInput(apiKeyInput, true);
+        });
+
+        apiKeyInput.addEventListener('change', () => {
+            syncApiKeyFromInput(apiKeyInput, true);
+        });
+
+        apiKeyInput.addEventListener('blur', () => {
+            syncApiKeyFromInput(apiKeyInput, true);
         });
     }
 
