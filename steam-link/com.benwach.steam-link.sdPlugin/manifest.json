@@ -52,6 +52,21 @@
 					"Image": "imgs/actions/steam-collection/key"
 				}
 			]
+		},
+		{
+			"Name": "WIP-Steam Oauth test",
+			"UUID": "com.benwach.steam-link.steam-oauth-test",
+			"Icon": "imgs/actions/steam-collection/icon",
+			"PropertyInspectorPath": "ui/steam-oauth-test.html",
+			"VisibleInActionsList": false,
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/steam-oauth-test/key"
+				}
+			]
 		}
 	],
 	"Category": "com.benwach.steam-link.sdPlugin",
